@@ -54,5 +54,5 @@ jobs:
           echo "Policy check passed. The EC2 instance has the valid tag"
 
       #Uncomment the following step if you want to apply the Terraform plan automatically
-      #- name: Apply Terraform plan
-      #   run: terraform apply -auto-approve tfplan
+      - name: Apply Terraform plan
+        run: terraform apply -auto-approve tfplan
