@@ -9,6 +9,6 @@ resource "aws_instance" "example" {
 
   tags = {
     Name    = "poc-instance"
-    #project = "devex"  # This must be 'devex' for the policy to allow creation
+    project = "devex"  # This must be 'devex' for the policy to allow creation
   }
 }
