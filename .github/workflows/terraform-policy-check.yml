@@ -1,0 +1,57 @@
+name: Terraform Policy Check
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  terraform-policy-check:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      region: us-east-1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+          terraform_wrapper: false
+
+      - name: Setup OPA
+        uses: open-policy-agent/setup-opa@v2
+        with:
+          version: latest
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Initialize Terraform
+        run: terraform init
+
+      - name: Plan Terraform
+        run: terraform plan -out=tfplan
+
+      - name: Convert Terraform plan to JSON
+        run: terraform show -json tfplan > tfplan.json
+
+
+      - name: Run OPA pretty
+        run: cat tfplan.json | opa eval -I -f pretty input
+
+      - name: Run OPA policy check
+        run: |
+          result=$(opa eval --data ec2_policy.rego --input tfplan.json "data.terraform.allow" | jq -r '.result[0].expressions[0].value' )
+          if [ "$result" != "true" ]; then
+            echo "Policy check failed. The EC2 instance must have the tag"
+            exit 1
+          fi
+          echo "Policy check passed. The EC2 instance has the valid tag"
+
+      #Uncomment the following step if you want to apply the Terraform plan automatically
+      #- name: Apply Terraform plan
+      #   run: terraform apply -auto-approve tfplan
